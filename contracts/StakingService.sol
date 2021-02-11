@@ -7,11 +7,16 @@ import "./LiquidityWealthEstimator.sol";
 import "./NmxSupplier.sol";
 import "./Nmx.sol";
 import "./PausableByOwner.sol";
+import "./Checks.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 import "abdk-libraries-solidity/ABDKMath64x64.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2ERC20.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 
 contract StakingService is PausableByOwner, DirectBonusAware, LiquidityWealthEstimator {
+    using SafeMath for uint256;
+    using SafeMath128 for uint128;
+
     /**
      * @param totalStaked amount of NMXLP currently staked in the service
      * @param historicalRewardRate how many NMX minted per one NMXLP (<< 40). Never decreases.
@@ -176,8 +181,8 @@ contract StakingService is PausableByOwner, DirectBonusAware, LiquidityWealthEst
         require(staker.amount >= amount, "NmxStakingService: NOT_ENOUGH_STAKED");
 
         emit Unstaked(from, to, amount);
-        state.totalStaked -= amount;
-        staker.amount -= amount;
+        state.totalStaked = state.totalStaked.sub(amount);
+        staker.amount = staker.amount.sub(uint256(amount));
 
         bool transferred = IERC20(stakingToken).transfer(to, amount);
         require(transferred, "NmxStakingService: LP_FAILED_TRANSFER");
@@ -188,21 +193,21 @@ contract StakingService is PausableByOwner, DirectBonusAware, LiquidityWealthEst
      */
     function claimReward() external returns (uint256) {
         Staker storage staker = updateStateAndStaker(msg.sender);
-        uint128 unclaimedReward = staker.reward - uint128(staker.claimedReward);
+        uint128 unclaimedReward = staker.reward.sub(Checks.safe_u128(staker.claimedReward));
         _claimReward(staker, msg.sender, msg.sender, unclaimedReward);
         return unclaimedReward;
     }
 
     function claimRewardTo(address to) external returns (uint256) {
         Staker storage staker = updateStateAndStaker(msg.sender);
-        uint128 unclaimedReward = staker.reward - uint128(staker.claimedReward);
+        uint128 unclaimedReward = staker.reward.sub(Checks.safe_u128(staker.claimedReward));
         _claimReward(staker, msg.sender, to, unclaimedReward);
         return unclaimedReward;
     }
 
     function claimRewardToWithoutUpdate(address to) external returns (uint256) {
         Staker storage staker = stakers[msg.sender];
-        uint128 unclaimedReward = staker.reward - uint128(staker.claimedReward);
+        uint128 unclaimedReward = staker.reward.sub(Checks.safe_u128(staker.claimedReward));
         _claimReward(staker, msg.sender, to, unclaimedReward);
         return unclaimedReward;
     }
@@ -240,8 +245,8 @@ contract StakingService is PausableByOwner, DirectBonusAware, LiquidityWealthEst
         staker = stakers[stakerAddress];
 
         uint128 unrewarded =
-            ((state.historicalRewardRate - staker.initialRewardRate) *
-                uint128(staker.amount)) >> 40;
+            ((state.historicalRewardRate.sub(staker.initialRewardRate)).mul(
+                Checks.safe_u128(staker.amount))) >> 40;
         emit StakingBonusAccrued(stakerAddress, unrewarded);
 
         if (unrewarded > 0) {
@@ -253,14 +258,14 @@ contract StakingService is PausableByOwner, DirectBonusAware, LiquidityWealthEst
                     getReferrerMultiplier(estimateWealth(referrer.amount), _pairedTokenDecimals());
                 int128 referralMultiplier = getReferralMultiplier();
                 uint128 referrerBonus =
-                    uint128(
+                    Checks.safe_u128(
                         ABDKMath64x64.mulu(
                             referrerMultiplier,
                             uint256(unrewarded)
                         )
                     );
                 uint128 referralBonus =
-                    uint128(
+                    Checks.safe_u128(
                         ABDKMath64x64.mulu(
                             referralMultiplier,
                             uint256(unrewarded)
@@ -272,7 +277,7 @@ contract StakingService is PausableByOwner, DirectBonusAware, LiquidityWealthEst
                 if (supplied < referrerBonus) {
                     referrerBonus = supplied;
                 }
-                supplied -= referrerBonus;
+                supplied = supplied.sub(referrerBonus);
                 if (supplied < referralBonus) {
                     referralBonus = supplied;
                 }
@@ -295,7 +300,7 @@ contract StakingService is PausableByOwner, DirectBonusAware, LiquidityWealthEst
         address to,
         uint128 amount
     ) private {
-        uint128 unclaimedReward = staker.reward - uint128(staker.claimedReward);
+        uint128 unclaimedReward = staker.reward.sub(Checks.safe_u128(staker.claimedReward));
         require(amount <= unclaimedReward, "NmxStakingService: NOT_ENOUGH_BALANCE");
         emit Rewarded(from, to, amount);
         staker.claimedReward += amount;
@@ -343,12 +348,12 @@ contract StakingService is PausableByOwner, DirectBonusAware, LiquidityWealthEst
      */
     function getReward() external returns (uint256 unclaimedReward) {
         Staker memory staker = updateStateAndStaker(msg.sender);
-        unclaimedReward = staker.reward - staker.claimedReward;
+        unclaimedReward = uint256(staker.reward).sub(staker.claimedReward);
     }
 
     function updateHistoricalRewardRate() public {
         uint128 currentNmxSupply =
-            uint128(NmxSupplier(nmxSupplier).supplyNmx());
+            Checks.safe_u128(NmxSupplier(nmxSupplier).supplyNmx());
         if (state.totalStaked != 0 && currentNmxSupply != 0)
             state.historicalRewardRate +=
                 (currentNmxSupply << 40) /

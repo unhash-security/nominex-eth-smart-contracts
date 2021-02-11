@@ -3,8 +3,10 @@ pragma solidity >=0.7.0 <0.8.0;
 pragma experimental ABIEncoderV2;
 
 import "./Lib.sol";
+import "./Checks.sol";
 import "abdk-libraries-solidity/ABDKMath64x64.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 
 contract MintSchedule is Ownable {
     /**
@@ -22,6 +24,7 @@ contract MintSchedule is Ownable {
     uint40 constant WEEK_DURATION = 7 days;
 
     using ABDKMath64x64 for int128;
+    using SafeMath for uint256;
     int128 public outputRate = ABDKMath64x64.fromInt(1); /// @dev in case it will be decided to mint Nmx in another blockchain
     ScheduleItem[] public items; /// @dev array of shcedule describing items
 
@@ -42,9 +45,9 @@ contract MintSchedule is Ownable {
         uint64[5] memory shares_01_28 =
             [
                 0,
-                uint64(abdk_8_10.mul(abdk_9_10)),
-                uint64(abdk_8_10.mul(abdk_1_10)),
-                uint64(abdk_2_10),
+                Checks.safe_u64(abdk_8_10.mul(abdk_9_10)),
+                Checks.safe_u64(abdk_8_10.mul(abdk_1_10)),
+                Checks.safe_u64(abdk_2_10),
                 0
             ];
 
@@ -52,61 +55,61 @@ contract MintSchedule is Ownable {
         uint64[5] memory shares_29_56 =
             [
                 0,
-                uint64(abdk_85_100.mul(abdk_75_100).mul(abdk_85_100)),
-                uint64(abdk_85_100.mul(abdk_75_100).mul(abdk_15_100)),
-                uint64(abdk_85_100.mul(abdk_25_100)),
-                uint64(abdk_15_100)
+                Checks.safe_u64(abdk_85_100.mul(abdk_75_100).mul(abdk_85_100)),
+                Checks.safe_u64(abdk_85_100.mul(abdk_75_100).mul(abdk_15_100)),
+                Checks.safe_u64(abdk_85_100.mul(abdk_25_100)),
+                Checks.safe_u64(abdk_15_100)
             ];
 
         // 0.0, 0.7 * 0.7 * 0.8, 0.7 * 0.7 * 0.2, 0.7 * 0.3, 0.30
         uint64[5] memory shares_57_xx =
             [
                 0,
-                uint64(abdk_7_10.mul(abdk_7_10).mul(abdk_8_10)),
-                uint64(abdk_7_10.mul(abdk_7_10).mul(abdk_2_10)),
-                uint64(abdk_7_10.mul(abdk_3_10)),
-                uint64(abdk_3_10)
+                Checks.safe_u64(abdk_7_10.mul(abdk_7_10).mul(abdk_8_10)),
+                Checks.safe_u64(abdk_7_10.mul(abdk_7_10).mul(abdk_2_10)),
+                Checks.safe_u64(abdk_7_10.mul(abdk_3_10)),
+                Checks.safe_u64(abdk_3_10)
             ];
 
         /*1-28 first 28 days*/
         ScheduleItem storage item = items.push();
         item.weekCount = 4;
-        item.weekCompletenessMultiplier = uint64(ABDKMath64x64.divu(994, 1000));
+        item.weekCompletenessMultiplier = Checks.safe_u64(ABDKMath64x64.divu(994, 1000));
         item.poolShares = shares_01_28;
 
         /*29-56 second 28 days*/
         item = items.push();
 
         item.weekCount = 4;
-        item.weekCompletenessMultiplier = uint64(ABDKMath64x64.divu(994, 1000));
+        item.weekCompletenessMultiplier = Checks.safe_u64(ABDKMath64x64.divu(994, 1000));
         item.poolShares = shares_29_56;
 
         /*57-182 - 0.5 year*/
         item = items.push();
 
         item.weekCount = 18;
-        item.weekCompletenessMultiplier = uint64(ABDKMath64x64.divu(994, 1000));
+        item.weekCompletenessMultiplier = Checks.safe_u64(ABDKMath64x64.divu(994, 1000));
         item.poolShares = shares_57_xx;
 
         /*183-371 - 1 year*/
         item = items.push();
 
         item.weekCount = 27;
-        item.weekCompletenessMultiplier = uint64(ABDKMath64x64.divu(996, 1000));
+        item.weekCompletenessMultiplier = Checks.safe_u64(ABDKMath64x64.divu(996, 1000));
         item.poolShares = shares_57_xx;
 
         /*372-735 - 2 year*/
         item = items.push();
 
         item.weekCount = 52;
-        item.weekCompletenessMultiplier = uint64(ABDKMath64x64.divu(998, 1000));
+        item.weekCompletenessMultiplier = Checks.safe_u64(ABDKMath64x64.divu(998, 1000));
         item.poolShares = shares_57_xx;
 
         /*736-1463 - 4 year*/
         item = items.push();
 
         item.weekCount = 104;
-        item.weekCompletenessMultiplier = uint64(
+        item.weekCompletenessMultiplier = Checks.safe_u64(
             ABDKMath64x64.divu(9995, 10000)
         );
         item.poolShares = shares_57_xx;
@@ -115,7 +118,7 @@ contract MintSchedule is Ownable {
         item = items.push();
 
         item.weekCount = 209;
-        item.weekCompletenessMultiplier = uint64(
+        item.weekCompletenessMultiplier = Checks.safe_u64(
             ABDKMath64x64.divu(9997, 10000)
         );
         item.poolShares = shares_57_xx;
@@ -124,7 +127,7 @@ contract MintSchedule is Ownable {
         item = items.push();
 
         item.weekCount = 365;
-        item.weekCompletenessMultiplier = uint64(
+        item.weekCompletenessMultiplier = Checks.safe_u64(
             ABDKMath64x64.divu(99985, 100000)
         );
         item.poolShares = shares_57_xx;
@@ -133,7 +136,7 @@ contract MintSchedule is Ownable {
         item = items.push();
 
         item.weekCount = 783;
-        item.weekCompletenessMultiplier = uint64(
+        item.weekCompletenessMultiplier = Checks.safe_u64(
             ABDKMath64x64.divu(99992, 100000)
         );
         item.poolShares = shares_57_xx;
@@ -142,7 +145,7 @@ contract MintSchedule is Ownable {
         item = items.push();
 
         item.weekCount = 1565;
-        item.weekCompletenessMultiplier = uint64(
+        item.weekCompletenessMultiplier = Checks.safe_u64(
             ABDKMath64x64.divu(99994, 100000)
         );
         item.poolShares = shares_57_xx;
@@ -151,7 +154,7 @@ contract MintSchedule is Ownable {
         item = items.push();
 
         item.weekCount = 2084;
-        item.weekCompletenessMultiplier = uint64(
+        item.weekCompletenessMultiplier = Checks.safe_u64(
             ABDKMath64x64.divu(99995, 100000)
         );
         item.poolShares = shares_57_xx;
@@ -176,18 +179,23 @@ contract MintSchedule is Ownable {
         MintPool pool
     ) external view returns (uint256 nmxSupply, MintScheduleState memory) {
         if (time <= scheduleState.time) return (0, scheduleState);
-        while (
-            time > scheduleState.time && scheduleState.itemIndex < items.length
-        ) {
+        while (true)
+        {
+            assert(time >= scheduleState.time);
+            if (!(time > scheduleState.time && scheduleState.itemIndex < items.length))
+                break;
+
             ScheduleItem storage item = items[scheduleState.itemIndex];
+            assert(scheduleState.weekStartTime <= scheduleState.time);
             uint40 boundary =
                 min(time, scheduleState.weekStartTime + WEEK_DURATION);
-            uint256 secondsFromLastUpdate = boundary - scheduleState.time;
+            uint256 secondsFromLastUpdate = uint256(boundary).sub(uint256(scheduleState.time));
+            assert(secondsFromLastUpdate > 0);
             nmxSupply +=
-                secondsFromLastUpdate *
+                secondsFromLastUpdate.mul(
                 outputRate.mul(item.poolShares[uint256(pool)]).mulu(
                     uint256(scheduleState.nextTickSupply)
-                );
+                ));
             persistStateChange(scheduleState, item, boundary);
         }
         return (nmxSupply, scheduleState);
@@ -199,14 +207,16 @@ contract MintSchedule is Ownable {
         uint40 time
     ) private pure {
         state.time = time;
+        assert(time <= state.weekStartTime + WEEK_DURATION);
         if (time == state.weekStartTime + WEEK_DURATION) {
-            state.nextTickSupply = uint128(
+            state.nextTickSupply = Checks.safe_u128(
                 int128(item.weekCompletenessMultiplier).mulu(
                     uint256(state.nextTickSupply)
                 )
             );
             state.weekIndex++;
             state.weekStartTime = time;
+            assert(state.weekIndex <= item.weekCount);
             if (state.weekIndex == item.weekCount) {
                 state.weekIndex = 0;
                 state.itemIndex++;

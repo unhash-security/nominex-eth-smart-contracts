@@ -111,9 +111,10 @@ module.exports = {
     },
     mocha: {
         enableTimeouts: false,
-        before_timeout: 120000, // Here is 2min but can be whatever timeout is suitable for you.
-        reporter: 'eth-gas-reporter',
-        reporterOptions : {}
+        timeout: 10000000,
+        before_timeout: 120000 // Here is 2min but can be whatever timeout is suitable for you.
+        //reporter: 'eth-gas-reporter',
+        //reporterOptions : {}
     },
 
     plugins: [

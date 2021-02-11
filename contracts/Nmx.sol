@@ -4,10 +4,13 @@ pragma experimental ABIEncoderV2;
 
 import "./NmxSupplier.sol";
 import "./MintSchedule.sol";
+import "./Checks.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract Nmx is ERC20, NmxSupplier, Ownable {
+    using SafeMath128 for uint128;
+
     bytes32 immutable public DOMAIN_SEPARATOR;
     // keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
     bytes32 public constant PERMIT_TYPEHASH =
@@ -112,12 +115,12 @@ contract Nmx is ERC20, NmxSupplier, Ownable {
         );
         if (block.timestamp < DISTRIBUTION_START_TIME) return 0;
         uint128 directPoolRest =
-            DIRECT_POOL_TOTAL_SUPPLY_LIMIT - directPoolTotalSupply;
+            DIRECT_POOL_TOTAL_SUPPLY_LIMIT.sub(directPoolTotalSupply);
         // scheduleRest was made to make it impossible to get all the DirectBonus pool at once
         uint128 scheduledRest =
-            uint128(
+            Checks.safe_u128(
                 (block.timestamp - DISTRIBUTION_START_TIME) * DIRECT_POOL_RATE
-            ) - directPoolTotalSupply;
+            ).sub(directPoolTotalSupply);
         if (directPoolRest > scheduledRest) {
             directPoolRest = scheduledRest;
         }
